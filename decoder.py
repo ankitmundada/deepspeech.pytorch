@@ -31,54 +31,15 @@ class Decoder(object):
         space_index (int, optional): index for the space ' ' character. Defaults to 28.
     """
 
-    def __init__(self, labels, blank_index=0, space_index=28):
+    def __init__(self, labels, blank_index=0):
         # e.g. labels = "_'ABCDEFGHIJKLMNOPQRSTUVWXYZ#"
         self.labels = labels
         self.int_to_char = dict([(i, c) for (i, c) in enumerate(labels)])
         self.blank_index = blank_index
+        space_index = len(labels)  # To prevent errors in decode, we add an out of bounds index for the space
+        if ' ' in labels:
+            space_index = labels.index(' ')
         self.space_index = space_index
-
-    def convert_to_strings(self, sequences, sizes=None):
-        """Given a list of numeric sequences, returns the corresponding strings"""
-        strings = []
-        for x in xrange(len(sequences)):
-            string = self.convert_to_string(sequences[x])
-            string = string[0:int(sizes.data[x])] if sizes is not None else string
-            strings.append(string)
-        return strings
-
-    def convert_to_string(self, sequence):
-        return ''.join([self.int_to_char[i] for i in sequence])
-
-    def process_strings(self, sequences, remove_repetitions=False):
-        """
-        Given a list of strings, removes blanks and replace space character with space.
-        Option to remove repetitions (e.g. 'abbca' -> 'abca').
-
-        Arguments:
-            sequences: list of 1-d array of integers
-            remove_repetitions (boolean, optional): If true, repeating characters
-                are removed. Defaults to False.
-        """
-        processed_strings = []
-        for sequence in sequences:
-            string = self.process_string(remove_repetitions, sequence).strip()
-            processed_strings.append(string)
-        return processed_strings
-
-    def process_string(self, remove_repetitions, sequence):
-        string = ''
-        for i, char in enumerate(sequence):
-            if char != self.int_to_char[self.blank_index]:
-                # if this char is a repetition and remove_repetitions=true,
-                # skip.
-                if remove_repetitions and i != 0 and char == sequence[i - 1]:
-                    pass
-                elif char == self.labels[self.space_index]:
-                    string += ' '
-                else:
-                    string = string + char
-        return string
 
     def wer(self, s1, s2):
         """
@@ -108,6 +69,7 @@ class Decoder(object):
             s1 (string): space-separated sentence
             s2 (string): space-separated sentence
         """
+        s1, s2, = s1.replace(' ', ''), s2.replace(' ', '')
         return Lev.distance(s1, s2)
 
     def decode(self, probs, sizes=None):
@@ -121,12 +83,102 @@ class Decoder(object):
             sizes(optional): Size of each sequence in the mini-batch
         Returns:
             string: sequence of the model's best guess for the transcription
-
         """
         raise NotImplementedError
 
 
-class ArgMaxDecoder(Decoder):
+class BeamCTCDecoder(Decoder):
+    def __init__(self, labels, lm_path=None, alpha=0, beta=0, cutoff_top_n=40, cutoff_prob=1.0, beam_width=100,
+                 num_processes=4, blank_index=0):
+        super(BeamCTCDecoder, self).__init__(labels)
+        try:
+            from ctcdecode import CTCBeamDecoder
+        except ImportError:
+            raise ImportError("BeamCTCDecoder requires paddledecoder package.")
+        self._decoder = CTCBeamDecoder(labels, lm_path, alpha, beta, cutoff_top_n, cutoff_prob, beam_width,
+                                       num_processes, blank_index)
+
+    def convert_to_strings(self, out, seq_len):
+        results = []
+        for b, batch in enumerate(out):
+            utterances = []
+            for p, utt in enumerate(batch):
+                size = seq_len[b][p]
+                if size > 0:
+                    transcript = ''.join(map(lambda x: self.int_to_char[x], utt[0:size]))
+                else:
+                    transcript = ''
+                utterances.append(transcript)
+            results.append(utterances)
+        return results
+
+    def convert_tensor(self, offsets, sizes):
+        results = []
+        for b, batch in enumerate(offsets):
+            utterances = []
+            for p, utt in enumerate(batch):
+                size = sizes[b][p]
+                if sizes[b][p] > 0:
+                    utterances.append(utt[0:size])
+                else:
+                    utterances.append(torch.IntTensor())
+            results.append(utterances)
+        return results
+
+    def decode(self, probs, sizes=None):
+        """
+        Decodes probability output using ctcdecode package.
+        Arguments:
+            probs: Tensor of character probabilities, where probs[c,t]
+                            is the probability of character c at time t
+            sizes: Size of each sequence in the mini-batch
+        Returns:
+            string: sequences of the model's best guess for the transcription
+        """
+        probs = probs.cpu().transpose(0, 1).contiguous()
+        out, scores, offsets, seq_lens = self._decoder.decode(probs)
+
+        strings = self.convert_to_strings(out, seq_lens)
+        offsets = self.convert_tensor(offsets, seq_lens)
+        return strings, offsets
+
+
+class GreedyDecoder(Decoder):
+    def __init__(self, labels, blank_index=0):
+        super(GreedyDecoder, self).__init__(labels, blank_index)
+
+    def convert_to_strings(self, sequences, sizes=None, remove_repetitions=False, return_offsets=False):
+        """Given a list of numeric sequences, returns the corresponding strings"""
+        strings = []
+        offsets = [] if return_offsets else None
+        for x in xrange(len(sequences)):
+            seq_len = sizes[x] if sizes is not None else len(sequences[x])
+            string, string_offsets = self.process_string(sequences[x], seq_len, remove_repetitions)
+            strings.append([string])  # We only return one path
+            if return_offsets:
+                offsets.append([string_offsets])
+        if return_offsets:
+            return strings, offsets
+        else:
+            return strings
+
+    def process_string(self, sequence, size, remove_repetitions=False):
+        string = ''
+        offsets = []
+        for i in range(size):
+            char = self.int_to_char[sequence[i]]
+            if char != self.int_to_char[self.blank_index]:
+                # if this char is a repetition and remove_repetitions=true, then skip
+                if remove_repetitions and i != 0 and char == self.int_to_char[sequence[i - 1]]:
+                    pass
+                elif char == self.labels[self.space_index]:
+                    string += ' '
+                    offsets.append(i)
+                else:
+                    string = string + char
+                    offsets.append(i)
+        return string, torch.IntTensor(offsets)
+
     def decode(self, probs, sizes=None):
         """
         Returns the argmax decoding given the probability matrix. Removes
@@ -137,7 +189,9 @@ class ArgMaxDecoder(Decoder):
             sizes(optional): Size of each sequence in the mini-batch
         Returns:
             strings: sequences of the model's best guess for the transcription on inputs
+            offsets: time step per character predicted
         """
         _, max_probs = torch.max(probs.transpose(0, 1), 2)
-        strings = self.convert_to_strings(max_probs.view(max_probs.size(0), max_probs.size(1)), sizes)
-        return self.process_strings(strings, remove_repetitions=True)
+        strings, offsets = self.convert_to_strings(max_probs.view(max_probs.size(0), max_probs.size(1)), sizes,
+                                                   remove_repetitions=True, return_offsets=True)
+        return strings, offsets

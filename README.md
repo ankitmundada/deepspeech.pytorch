@@ -4,6 +4,16 @@
 Implementation of DeepSpeech2 using [Baidu Warp-CTC](https://github.com/baidu-research/warp-ctc).
 Creates a network based on the [DeepSpeech2](http://arxiv.org/pdf/1512.02595v1.pdf) architecture, trained with the CTC activation function.
 
+## Features
+
+* Train DeepSpeech, configurable RNN types and architectures with multi-gpu support.
+* Language model support using kenlm (WIP right now, currently no instructions to build a LM yet).
+* Multiple dataset downloaders, support for AN4, TED, Voxforge and Librispeech. Datasets can be merged, support for custom datasets included.
+* Noise injection for online training to improve noise robustness.
+* Audio augmentation to improve noise robustness.
+* Easy start/stop capabilities in the event of crash or hard stop during training.
+* Visdom/Tensorboard support for visualising training graphs.
+
 # Installation
 
 Several libraries are needed to be installed for training to work. I will assume that everything is being installed in
@@ -19,7 +29,7 @@ mkdir build; cd build
 cmake ..
 make
 export CUDA_HOME="/usr/local/cuda"
-cd pytorch_binding
+cd ../pytorch_binding
 python setup.py install
 ```
 
@@ -28,10 +38,18 @@ Install pytorch audio:
 sudo apt-get install sox libsox-dev libsox-fmt-all
 git clone https://github.com/pytorch/audio.git
 cd audio
+pip install cffi
 python setup.py install
 ```
 
-Finally:
+If you want decoding to support beam search with an optional language model, install ctcdecode:
+```
+git clone --recursive https://github.com/parlance/ctcdecode.git
+cd ctcdecode
+pip install .
+```
+
+Finally clone this repo and run this within the repo:
 ```
 pip install -r requirements.txt
 ```
@@ -137,6 +155,14 @@ There is also [Visdom](https://github.com/facebookresearch/visdom) support to vi
 python train.py --visdom
 ```
 
+There is also [Tensorboard](https://github.com/lanpa/tensorboard-pytorch) support to visualise training. Follow the instructions to set up. To use:
+
+```
+python train.py --tensorboard --logdir log_dir/ # Make sure the tensorboard instance is made pointing to this log directory
+```
+
+For both visualisation tools, you can add your own name to the run by changing the `--id` parameter when training.
+
 ### Noise Augmentation/Injection
 
 There is support for two different types of noise; noise augmentation and noise injection.
@@ -185,6 +211,9 @@ python train.py --continue_from models/deepspeech_checkpoint_epoch_N_iter_N.pth.
 
 This continues from the same training state as well as recreates the visdom graph to continue from if enabled.
 
+If you would like to start from a previous checkpoint model but not continue training, add the `--finetune` flag to restart training
+from the `--continue_from` weights.
+
 ### Choosing batch sizes
 
 Included is a script that can be used to benchmark whether training can occur on your hardware, and the limits on the size of the model/batch
@@ -214,11 +243,30 @@ To evaluate a trained model on a test set (has to be in the same format as the t
 python test.py --model_path models/deepspeech.pth.tar --test_manifest /path/to/test_manifest.csv --cuda
 ```
 
-An example script to output a prediction has been provided:
+An example script to output a transcription has been provided:
 
 ```
-python predict.py --model_path models/deepspeech.pth.tar --audio_path /path/to/audio.wav
+python transcribe.py --model_path models/deepspeech.pth.tar --audio_path /path/to/audio.wav
 ```
+
+### Alternate Decoders
+By default, `test.py` and `transcribe.py` use a `GreedyDecoder` which picks the highest-likelihood output label at each timestep. Repeated and blank symbols are then filtered to give the final output.
+
+A beam search decoder can optionally be used with the installation of the `ctcdecode` library as described in the Installation section. The `test` and `transcribe` scripts have a `--decoder` argument. To use the beam decoder, add `--decoder beam`. The beam decoder enables additional decoding parameters:
+- **beam_width** how many beams to consider at each timestep
+- **lm_path** optional binary KenLM language model to use for decoding
+- **alpha** weight for language model
+- **beta** bonus weight for words
+
+### Time offsets
+
+Use the `--offsets` flag to get positional information of each character in the transcription when using `transcribe.py` script. The offsets are based on the size
+of the output tensor, which you need to convert into a format required.
+For example, based on default parameters you could multiply the offsets by a scalar (duration of file in seconds / size of output) to get the offsets in seconds.
+
+## Pre-trained models
+
+Pre-trained models can be found under releases [here](https://github.com/SeanNaren/deepspeech.pytorch/releases).
 
 ## Acknowledgements
 
