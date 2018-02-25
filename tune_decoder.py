@@ -19,7 +19,7 @@ parser.add_argument('--test-manifest', metavar='DIR',
 parser.add_argument('--num-workers', default=16, type=int, help='Number of parallel decodes to run')
 parser.add_argument('--output-path', default="tune_results.json", help="Where to save tuning results")
 beam_args = parser.add_argument_group("Beam Decode Options", "Configurations options for the CTC Beam Search decoder")
-beam_args.add_argument('--beam-width', default=10, type=int, help='Beam width to use')
+beam_args.add_argument('--beam-width', default=128, type=int, help='Beam width to use')
 beam_args.add_argument('--lm-path', default=None, type=str,
                        help='Path to an (optional) kenlm language model for use with beam search (req\'d with trie)')
 beam_args.add_argument('--lm-alpha-from', default=1, type=float, help='Language model weight start tuning')
@@ -76,7 +76,7 @@ def decode_dataset(logits, test_dataset, batch_size, lm_alpha, lm_beta, mesh_x, 
     wer = total_wer / len(test_loader.dataset)
     cer = total_cer / len(test_loader.dataset)
 
-    return [mesh_x, mesh_y, lm_alpha, lm_beta, wer, cer, grid_index]
+    return [grid_index, mesh_x, mesh_y, lm_alpha, lm_beta, wer, cer]
 
 
 if __name__ == '__main__':
