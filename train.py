@@ -136,7 +136,7 @@ if __name__ == '__main__':
         model = DeepSpeech.load_model_package(package)
         labels = DeepSpeech.get_labels(model)
         audio_conf = DeepSpeech.get_audio_conf(model)
-        parameters = model.parameters()
+        parameters = filter(lambda p: p.requires_grad, model.parameters())
         optimizer = torch.optim.Adam(parameters, lr=args.lr)
 
         if not args.finetune:  # Don't want to restart training
@@ -203,7 +203,7 @@ if __name__ == '__main__':
                            rnn_type=supported_rnns[rnn_type],
                            audio_conf=audio_conf,
                            bidirectional=args.bidirectional)
-        parameters = model.parameters()
+        parameters = filter(lambda p: p.requires_grad, model.parameters())
         optimizer = torch.optim.Adam(parameters, lr=args.lr)
 
     decoder = GreedyDecoder(labels)
