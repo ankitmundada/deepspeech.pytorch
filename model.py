@@ -162,6 +162,7 @@ class DeepSpeech(nn.Module):
             nn.Hardtanh(0, 20, inplace=True)
         ) if not bidirectional else None
 
+        for p in self.parameters(): p.requires_grad = False
         fully_connected = nn.Sequential(
             nn.BatchNorm1d(rnn_hidden_size),
             nn.Linear(rnn_hidden_size, num_classes, bias=False)
