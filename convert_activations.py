@@ -22,8 +22,9 @@ if __name__ == '__main__':
     else:
         raise RuntimeError("Could not update activations")
 
+    learning_rate = float(package["optim_dict"]["param_groups"][0]["lr"])
     parameters = model.parameters()
-    optimizer = torch.optim.Adam(parameters)
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=learning_rate)
     epoch = package.get('epoch', None)
     if epoch:
         epoch -= 1 # indexed from 0
