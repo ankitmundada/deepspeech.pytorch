@@ -261,7 +261,8 @@ class DeepSpeech(nn.Module):
     @staticmethod
     def get_param_size(model):
         params = 0
-        for p in model.parameters():
+        parameters = filter(lambda p: p.requires_grad, model.parameters())
+        for p in parameters:
             tmp = 1
             for x in p.size():
                 tmp *= x
