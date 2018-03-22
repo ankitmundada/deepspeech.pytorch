@@ -1,4 +1,5 @@
 import math
+import json
 from collections import OrderedDict
 
 import torch
@@ -193,8 +194,10 @@ class DeepSpeech(nn.Module):
     @classmethod
     def load_model(cls, path, cuda=False):
         package = torch.load(path, map_location=lambda storage, loc: storage)
+        with open("labels.json") as label_file:
+            labels = str(''.join(json.load(label_file)))
         model = cls(rnn_hidden_size=package['hidden_size'], nb_layers=package['hidden_layers'],
-                    labels=package['labels'], audio_conf=package['audio_conf'],
+                    labels=labels, audio_conf=package['audio_conf'],
                     rnn_type=supported_rnns[package['rnn_type']], bidirectional=package.get('bidirectional', True), activations=package.get('activations', 'hardtanh'))
         # the blacklist parameters are params that were previous erroneously saved by the model
         # care should be taken in future versions that if batch_norm on the first rnn is required
@@ -204,6 +207,8 @@ class DeepSpeech(nn.Module):
         for x in blacklist:
             if x in package['state_dict']:
                 del package['state_dict'][x]
+        if 'fc.0.module.1.weight' in package['state_dict']:
+            package['state_dict']['fc.0.module.1.weight'] = model.state_dict()['fc.0.module.1.weight']
         model.load_state_dict(package['state_dict'])
         for x in model.rnns:
             x.flatten_parameters()
@@ -213,9 +218,13 @@ class DeepSpeech(nn.Module):
 
     @classmethod
     def load_model_package(cls, package, cuda=False):
+        with open("labels.json") as label_file:
+            labels = str(''.join(json.load(label_file)))
         model = cls(rnn_hidden_size=package['hidden_size'], nb_layers=package['hidden_layers'],
-                    labels=package['labels'], audio_conf=package['audio_conf'],
+                    labels=labels, audio_conf=package['audio_conf'],
                     rnn_type=supported_rnns[package['rnn_type']], bidirectional=package.get('bidirectional', True), activations=package.get('activations', 'hardtanh'))
+        if 'fc.0.module.1.weight' in package['state_dict']:
+            package['state_dict']['fc.0.module.1.weight'] = model.state_dict()['fc.0.module.1.weight']
         model.load_state_dict(package['state_dict'])
         if cuda:
             model = torch.nn.DataParallel(model).cuda()
