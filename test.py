@@ -60,6 +60,7 @@ if __name__ == '__main__':
     test_loader = AudioDataLoader(test_dataset, batch_size=args.batch_size,
                                   num_workers=args.num_workers)
     total_cer, total_wer = 0, 0
+    incorrect_preds = 0
     output_data = []
     for i, (data) in tqdm(enumerate(test_loader), total=len(test_loader)):
         inputs, targets, input_percentages, target_sizes = data
@@ -90,6 +91,8 @@ if __name__ == '__main__':
         wer, cer = 0, 0
         for x in range(len(target_strings)):
             transcript, reference = decoded_output[x][0], target_strings[x][0]
+            if transcript != reference: incorrect_preds += 1
+            #print("trans: {}, ref: {}".format(transcript, reference))
             wer_inst = decoder.wer(transcript, reference) / float(len(reference.split()))
             cer_inst = decoder.cer(transcript, reference) / float(len(reference))
             wer += wer_inst
@@ -104,6 +107,8 @@ if __name__ == '__main__':
     if decoder is not None:
         wer = total_wer / len(test_loader.dataset)
         cer = total_cer / len(test_loader.dataset)
+
+        print("Incorrectly predicted files: {}".format(incorrect_preds))
 
         print('Test Summary \t'
               'Average WER {wer:.3f}\t'
