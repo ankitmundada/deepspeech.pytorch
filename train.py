@@ -362,6 +362,7 @@ if __name__ == '__main__':
             wer, cer = 0, 0
             for x in range(len(target_strings)):
                 transcript, reference = decoded_output[x][0], target_strings[x][0]
+                #print("tranpt: {}, ref: {}".format(transcript, reference))
                 wer += decoder.wer(transcript, reference) / float(len(reference.split()))
                 cer += decoder.cer(transcript, reference) / float(len(reference))
             total_cer += cer

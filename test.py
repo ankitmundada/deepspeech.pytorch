@@ -59,8 +59,8 @@ if __name__ == '__main__':
                                       normalize=True)
     test_loader = AudioDataLoader(test_dataset, batch_size=args.batch_size,
                                   num_workers=args.num_workers)
-    total_cer, total_wer = 0, 0
     incorrect_preds = 0
+    total_cer, total_wer, num_tokens, num_chars = 0, 0, 0, 0
     output_data = []
     for i, (data) in tqdm(enumerate(test_loader), total=len(test_loader)):
         inputs, targets, input_percentages, target_sizes = data
@@ -88,25 +88,24 @@ if __name__ == '__main__':
 
         decoded_output, _, = decoder.decode(out.data, sizes)
         target_strings = target_decoder.convert_to_strings(split_targets)
-        wer, cer = 0, 0
         for x in range(len(target_strings)):
             transcript, reference = decoded_output[x][0], target_strings[x][0]
             if transcript != reference: incorrect_preds += 1
             #print("trans: {}, ref: {}".format(transcript, reference))
-            wer_inst = decoder.wer(transcript, reference) / float(len(reference.split()))
-            cer_inst = decoder.cer(transcript, reference) / float(len(reference))
-            wer += wer_inst
-            cer += cer_inst
+            wer_inst = decoder.wer(transcript, reference)
+            cer_inst = decoder.cer(transcript, reference)
+            total_wer += wer_inst
+            total_cer += cer_inst
+            num_tokens += len(reference.split())
+            num_chars += len(reference)
             if args.verbose:
                 print("Ref:", reference.lower())
                 print("Hyp:", transcript.lower())
-                print("WER:", wer_inst, "CER:", cer_inst, "\n")
-        total_cer += cer
-        total_wer += wer
+                print("WER:", float(wer_inst) / len(reference.split()), "CER:", float(cer_inst) / len(reference), "\n")
 
     if decoder is not None:
-        wer = total_wer / len(test_loader.dataset)
-        cer = total_cer / len(test_loader.dataset)
+        wer = float(total_wer) / num_tokens
+        cer = float(total_cer) / num_chars
 
         print("Incorrectly predicted files: {}".format(incorrect_preds))
 

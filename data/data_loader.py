@@ -14,13 +14,14 @@ import torchaudio
 import math
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
-
 import re
+
 re_multi_a = re.compile("a+")
 re_multi_b = re.compile("b+")
 
 windows = {'hamming': scipy.signal.hamming, 'hann': scipy.signal.hann, 'blackman': scipy.signal.blackman,
            'bartlett': scipy.signal.bartlett}
+
 
 
 def load_audio(path):
@@ -168,8 +169,11 @@ class SpectrogramDataset(Dataset, SpectrogramParser):
     def parse_transcript(self, transcript_path):
         with open(transcript_path, 'r', encoding='utf8') as transcript_file:
             transcript = transcript_file.read().replace('\n', '')
-            transcript = re_multi_a.sub("a", transcript)
-            transcript = re_multi_b.sub("b", transcript)
+        #transcript = re_multi_a.sub("a", transcript)
+        #transcript = re_multi_b.sub("b", transcript)
+        #transcript = re_multi_a.sub("v", transcript)
+        #transcript = re_multi_b.sub("t v", transcript)
+        #transcript = transcript.replace("a", "v").replace(" ", " t ").replace("b", "v")
         transcript = list(filter(None, [self.labels_map.get(x) for x in list(transcript)]))
         return transcript
 

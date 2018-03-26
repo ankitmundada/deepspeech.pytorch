@@ -88,4 +88,9 @@ if __name__ == '__main__':
     out = model(Variable(spect, volatile=True))
     out = out.transpose(0, 1)  # TxNxH
     decoded_output, decoded_offsets = decoder.decode(out.data)
-    print(json.dumps(decode_results(model, decoded_output, decoded_offsets)))
+    print(decoded_output, "\n", len(decoded_output), "".join([d[1] for d in decoded_output]))
+    for i, d in enumerate(decoded_output):
+        if d[0] == 't':
+            print("turn at: {}".format(0.02*(i+1)))
+
+    #print(json.dumps(decode_results(model, decoded_output, decoded_offsets)))
