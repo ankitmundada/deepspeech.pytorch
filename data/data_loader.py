@@ -173,7 +173,7 @@ class SpectrogramDataset(Dataset, SpectrogramParser):
         #transcript = re_multi_b.sub("b", transcript)
         #transcript = re_multi_a.sub("v", transcript)
         #transcript = re_multi_b.sub("t v", transcript)
-        #transcript = transcript.replace("a", "v").replace(" ", " t ").replace("b", "v")
+        transcript = "v t v" if "b" in transcript else "v v"
         transcript = list(filter(None, [self.labels_map.get(x) for x in list(transcript)]))
         return transcript
 
