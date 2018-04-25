@@ -98,7 +98,9 @@ if __name__ == '__main__':
     decoded_output, decoded_offsets = decoder.decode(out.data)
     result = decode_results(model, decoded_output, decoded_offsets)
     if args.raw:
-        print(result['output'][0]['transcription'])
+        for out in result['output']:
+            print(out['transcription'])
+            print("\n------------------------------\n")
     else:
         print(json.dumps(result))
 
