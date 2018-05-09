@@ -109,7 +109,7 @@ if __name__ == '__main__':
             else:
                 if is_turn: false_neg += 1
                 else: true_neg += 1
-        precision, recall = float(true_pos)/(true_pos + false_neg), float(true_pos)/(true_pos + false_pos)
+        precision, recall = float(true_pos)/(true_pos + false_pos), float(true_pos)/(true_pos + false_neg)
         #print('TP: {} | TN: {} | FP: {} | FN: {} | prec: {:.2f} | recall: {:.2f}'.format(true_pos, true_neg, false_pos, false_neg, precision, recall))
 
     print("\n")
