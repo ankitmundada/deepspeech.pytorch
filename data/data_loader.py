@@ -16,8 +16,8 @@ from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 import re
 
-re_multi_a = re.compile("a+")
-re_multi_b = re.compile("b+")
+re_multi_space = re.compile("[ ]{2,}")
+re_oov = re.compile("[^A-Z ',|.]")
 
 windows = {'hamming': scipy.signal.hamming, 'hann': scipy.signal.hann, 'blackman': scipy.signal.blackman,
            'bartlett': scipy.signal.bartlett}
@@ -168,12 +168,9 @@ class SpectrogramDataset(Dataset, SpectrogramParser):
 
     def parse_transcript(self, transcript_path):
         with open(transcript_path, 'r', encoding='utf8') as transcript_file:
-            transcript = transcript_file.read().replace('\n', '')
-        #transcript = re_multi_a.sub("a", transcript)
-        #transcript = re_multi_b.sub("b", transcript)
-        #transcript = re_multi_a.sub("v", transcript)
-        #transcript = re_multi_b.sub("t v", transcript)
-        transcript = "v t v" if "b" in transcript else "v v"
+            transcript = transcript_file.read().replace('\n', '').upper()
+        transcript = re_oov.sub(" ", transcript)
+        transcript = re_multi_space.sub(" ", transcript)
         transcript = list(filter(None, [self.labels_map.get(x) for x in list(transcript)]))
         return transcript
 

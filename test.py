@@ -59,7 +59,7 @@ if __name__ == '__main__':
                                       normalize=True)
     test_loader = AudioDataLoader(test_dataset, batch_size=args.batch_size,
                                   num_workers=args.num_workers)
-    true_pos, true_neg, false_pos, false_neg, precision, recall = 0, 0, 0, 0, 0, 0
+    true_pos, true_neg, false_pos, false_neg, precision, recall = [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]
     total_cer, total_wer, num_tokens, num_chars = 0, 0, 0, 0
     output_data = []
     for i, (data) in tqdm(enumerate(test_loader), total=len(test_loader)):
@@ -102,18 +102,28 @@ if __name__ == '__main__':
                 print("Hyp:", transcript.lower())
                 print("WER:", float(wer_inst) / len(reference.split()), "CER:", float(cer_inst) / len(reference), "\n")
 
-            is_turn = "t" in reference
-            if "t" in transcript:
-                if is_turn: true_pos += 1
-                else: false_pos += 1
+            is_turn = "|" in reference
+            if "|" in transcript:
+                if is_turn: true_pos[0] += 1
+                else: false_pos[0] += 1
             else:
-                if is_turn: false_neg += 1
-                else: true_neg += 1
-        precision, recall = float(true_pos)/(true_pos + false_pos), float(true_pos)/(true_pos + false_neg)
+                if is_turn: false_neg[0] += 1
+                else: true_neg[0] += 1
+
+            is_period = "." in reference
+            if "." in transcript:
+                if is_period: true_pos[1] += 1
+                else: false_pos[1] += 1
+            else:
+                if is_period: false_neg[1] += 1
+                else: true_neg[1] += 1
+        precision[0], recall[0] = float(true_pos[0])/(true_pos[0] + false_pos[0]), float(true_pos[0])/(true_pos[0] + false_neg[0])
+        precision[1], recall[1] = float(true_pos[1])/(true_pos[1] + false_pos[1]), float(true_pos[1])/(true_pos[1] + false_neg[1])
         #print('TP: {} | TN: {} | FP: {} | FN: {} | prec: {:.2f} | recall: {:.2f}'.format(true_pos, true_neg, false_pos, false_neg, precision, recall))
 
     print("\n")
-    print('TP: {} | TN: {} | FP: {} | FN: {} | prec: {:.2f} | recall: {:.2f}'.format(true_pos, true_neg, false_pos, false_neg, precision, recall))
+    print('PIPES - TP: {} | TN: {} | FP: {} | FN: {} | prec: {:.2f} | recall: {:.2f}'.format(true_pos[0], true_neg[0], false_pos[0], false_neg[0], precision[0], recall[0]))
+    print('PERIODS - TP: {} | TN: {} | FP: {} | FN: {} | prec: {:.2f} | recall: {:.2f}'.format(true_pos[1], true_neg[1], false_pos[1], false_neg[1], precision[1], recall[1]))
     if decoder is not None:
         wer = float(total_wer) / num_tokens
         cer = float(total_cer) / num_chars
