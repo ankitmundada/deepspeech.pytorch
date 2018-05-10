@@ -113,7 +113,8 @@ if __name__ == '__main__':
         #print('TP: {} | TN: {} | FP: {} | FN: {} | prec: {:.2f} | recall: {:.2f}'.format(true_pos, true_neg, false_pos, false_neg, precision, recall))
 
     print("\n")
-    print('TP: {} | TN: {} | FP: {} | FN: {} | prec: {:.2f} | recall: {:.2f}'.format(true_pos, true_neg, false_pos, false_neg, precision, recall))
+    f_score = 2*precision*recall/(precision + recall)
+    print('TP: {} | TN: {} | FP: {} | FN: {} | prec: {:.2f} | recall: {:.2f} | f_score: {:.2f}'.format(true_pos, true_neg, false_pos, false_neg, precision, recall, f_score))
     if decoder is not None:
         wer = float(total_wer) / num_tokens
         cer = float(total_cer) / num_chars
