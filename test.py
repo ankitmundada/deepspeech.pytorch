@@ -117,10 +117,10 @@ if __name__ == '__main__':
             else:
                 if is_period: false_neg[1] += 1
                 else: true_neg[1] += 1
-        precision[0], recall[0] = float(true_pos[0])/(true_pos[0] + false_pos[0]), float(true_pos[0])/(true_pos[0] + false_neg[0])
-        precision[1], recall[1] = float(true_pos[1])/(true_pos[1] + false_pos[1]), float(true_pos[1])/(true_pos[1] + false_neg[1])
         #print('TP: {} | TN: {} | FP: {} | FN: {} | prec: {:.2f} | recall: {:.2f}'.format(true_pos, true_neg, false_pos, false_neg, precision, recall))
 
+    precision[0], recall[0] = float(true_pos[0])/(true_pos[0] + false_pos[0]), float(true_pos[0])/(true_pos[0] + false_neg[0])
+    precision[1], recall[1] = float(true_pos[1])/(true_pos[1] + false_pos[1]), float(true_pos[1])/(true_pos[1] + false_neg[1])
     f_score = [2*precision[0]*recall[0]/(precision[0] + recall[0]), 2*precision[1]*recall[1]/(precision[1] + recall[1])]
     print("\n")
     print('PIPES - TP: {} | TN: {} | FP: {} | FN: {} | prec: {:.2f} | recall: {:.2f} | f-score: {:.2f}'.format(true_pos[0], true_neg[0], false_pos[0], false_neg[0], precision[0], recall[0], f_score[0]))
