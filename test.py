@@ -63,7 +63,7 @@ if __name__ == '__main__':
     total_cer, total_wer = 0, 0
     output_data = []
     for i, (data) in tqdm(enumerate(test_loader), total=len(test_loader)):
-        inputs, targets, input_percentages, target_sizes = data
+        inputs, targets, input_percentages, target_sizes, transcript_paths = data
         #print(input_percentages)
 
         if float(torch.__version__[:3]) > 0.3:
@@ -95,9 +95,9 @@ if __name__ == '__main__':
         decoded_output, _, = decoder.decode(out.data, sizes)
         target_strings = target_decoder.convert_to_strings(split_targets)
         wer, cer = 0, 0
-        for x in range(len(target_strings)):
+        for j, x in enumerate(range(len(target_strings))):
             transcript, reference = decoded_output[x][0], target_strings[x][0].replace(" '", "'")
-            print("Prediction: {}\nReference: {}\n-------------------------".format(transcript, reference))
+            print("File: {}\nPrediction: {}\nReference: {}\n-------------------------".format(transcript_paths[j], transcript, reference))
             wer_inst = decoder.wer(transcript, reference) / float(len(reference.split()))
             cer_inst = decoder.cer(transcript, reference) / float(len(reference))
             wer += wer_inst

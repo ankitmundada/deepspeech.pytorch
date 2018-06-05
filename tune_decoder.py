@@ -48,7 +48,7 @@ def decode_dataset(logits, test_dataset, batch_size, lm_alpha, lm_beta, mesh_x, 
                              alpha=lm_alpha, beta=lm_beta, num_processes=1)
     total_cer, total_wer = 0, 0
     for i, (data) in enumerate(test_loader):
-        inputs, targets, input_percentages, target_sizes = data
+        inputs, targets, input_percentages, target_sizes, transcript_paths = data
 
         # unflatten targets
         split_targets = []
@@ -63,9 +63,9 @@ def decode_dataset(logits, test_dataset, batch_size, lm_alpha, lm_beta, mesh_x, 
         decoded_output, _, = decoder.decode(out, sizes)
         target_strings = target_decoder.convert_to_strings(split_targets)
         wer, cer = 0, 0
-        for x in range(len(target_strings)):
+        for j, x in enumerate(range(len(target_strings))):
             transcript, reference = decoded_output[x][0], target_strings[x][0]
-            #print("Prediction: {}\nReference: {}\n-------------------------".format(transcript, reference))
+            #print("File: {}\nPrediction: {}\nReference: {}\n-------------------------".format(transcript_paths[j], transcript, reference))
             wer_inst = decoder.wer(transcript, reference) / float(len(reference.split()))
             cer_inst = decoder.cer(transcript, reference) / float(len(reference))
             wer += wer_inst
